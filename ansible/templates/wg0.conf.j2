@@ -1,0 +1,11 @@
+[Interface]
+Address = 10.0.1.254/24
+ListenPort = 8088
+PrivateKey = {{ wireguard_private_key.content | b64decode }}
+SaveConfig = true
+
+{% for pubkey in pubkeys %}
+[Peer]
+PublicKey = {{ pubkey }}
+AllowedIPs = 10.0.1.{{ loop.index }}/32
+{% endfor %}

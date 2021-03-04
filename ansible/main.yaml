@@ -1,0 +1,62 @@
+- hosts: all
+  tasks:
+  - name: Add Buster backports repository
+    apt_repository:
+      repo: deb http://deb.debian.org/debian buster-backports main contrib non-free
+      state: present
+      filename: buster-backports
+  - name: Update to latest Debian
+    apt:
+      update_cache: true
+      upgrade: yes
+  - name: Preinstall Linux kernel headers
+    apt:
+      name:
+      - "linux-headers-{{ ansible_kernel }}"
+  - name: Install Wireguard
+    apt:
+      name:
+      - wireguard
+
+  - name: Initialize Wireguard configuration directory
+    file:
+      path: /etc/wireguard
+      state: directory
+  - name: Generate Wireguard keys
+    shell:
+      cmd: |
+        umask 077
+        wg genkey | tee privatekey | wg pubkey > publickey
+      chdir: /etc/wireguard
+  - name: Slurp Wireguard private key
+    slurp:
+      src: /etc/wireguard/privatekey
+    register: wireguard_private_key
+  - name: Install Wireguard configuration
+    template:
+      src: wg0.conf.j2
+      dest: /etc/wireguard/wg0.conf
+      mode: 0600
+  - name: Slurp Wireguard public key
+    slurp:
+      src: /etc/wireguard/publickey
+    register: wireguard_public_key
+  - name: Output Wireguard public key
+    debug:
+      msg:
+      - "PublicKey={{ wireguard_public_key.content | b64decode | trim }}"
+      - installed_pubkeys: "{{ pubkeys }}"
+  - name: Start Wireguard
+    systemd:
+      name: wg-quick@wg0
+      enabled: true
+      state: started
+
+  - name: install Tinyproxy
+    apt:
+      name:
+      - tinyproxy
+  - name: Allow Wireguard traffic to Tinyproxy
+    lineinfile:
+      line: "Allow 10.0.1.0/24"
+      path: /etc/tinyproxy/tinyproxy.conf

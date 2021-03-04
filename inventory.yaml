@@ -1,0 +1,5 @@
+all:
+  hosts: 
+    root@wireguard.syntixi.io:
+      pubkeys:
+      - 1uyz647HLkcbC0UtcE23mNb/SPhyxxBSCwR1LI7lrh4=
